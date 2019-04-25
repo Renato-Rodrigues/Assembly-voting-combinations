@@ -1,0 +1,228 @@
+---
+title: "Vote combinations"
+output:
+  html_document:
+    theme: paper
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+Initialization
+===================
+
+```{r}
+# loading required libraries
+packagesList <- c("dplyr","tidyr","arrangements","knitr","kableExtra")
+packages <- suppressWarnings(suppressMessages(lapply(packagesList, function(x){ if(!require(x, character.only = T, quietly = T)){ install.packages(x); return(paste0("installed missing package: ", x)) } else paste0("required package is installed: ", x) } )))
+```
+
+
+---------------
+
+
+Solving the hard way
+===================
+
+### Three companies
+
+```{r}
+# Solving for three companies and three possible plans
+companies <- c("A","B","C") # companies
+possiblePlans <- c("Plan 1","Plan 2","Plan 3") # possible plans to be voted
+# Plan 1
+df <- NULL
+for (c in 1:length(companies)){ # from 1 to n companies can commit for first plan
+  possCombinations <- combinations(companies, c) # possible combinations for companies to commit to 
+  for (comb in 1:nrow(possCombinations)){ 
+    df <- rbind(df, paste(possCombinations[comb,],collapse=","))
+  }
+}
+# Plan 2
+ndf <- NULL
+for (p in 1:nrow(df)){ # for each of possible combination already existent
+  remainingCompanies <- setdiff(companies, unlist(strsplit(df[p,],","))) # remaining companies without a plan
+  if(length(remainingCompanies)>0){
+    for (c in 1:length(remainingCompanies)){ # from 1 to n remainingCompanies can commit to current plan
+      possCombinations <- combinations(remainingCompanies, c) # possible combinations for companies to commit to 
+      for (comb in 1:nrow(possCombinations)){
+        ndf <- rbind(ndf, c(df[p,], paste(possCombinations[comb,],collapse=","))) 
+      }
+    }
+  } else {
+    ndf <- rbind(ndf, c(df[p,], "")) 
+  }
+}
+# Plan 3
+df <- ndf
+ndf <- NULL
+for (p in 1:nrow(df)){ # for each of possible combination already existent
+  remainingCompanies <- setdiff(companies, unlist(strsplit(df[p,],","))) # remaining companies without a plan
+  if(length(remainingCompanies)>0){
+    for (c in 1:length(remainingCompanies)){ # from 1 to n remainingCompanies can commit to current plan
+      possCombinations <- combinations(remainingCompanies, c) # possible combinations for companies to commit to 
+      for (comb in 1:nrow(possCombinations)){ 
+        ndf <- rbind(ndf, c(df[p,], paste(possCombinations[comb,],collapse=","))) 
+      }
+    }
+  } else {
+    ndf <- rbind(ndf, c(df[p,], "")) 
+  }
+}
+#Removing duplicates
+out <- data.frame(ndf)
+out <- unite(out, aux, sep = "|", remove=F) 
+out$aux <- duplicated(lapply(strsplit(out$aux,"\\|") , function(x){
+  tmp <- sort(x)
+  tmp <- tmp[!(tmp == "|")]
+  return(tmp)}))
+out <- out[!(out$aux),-which(names(out) == "aux")] 
+names(out) <- paste("Plan ", seq(1,length(out),1))
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(out) `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+```{r, echo = FALSE} 
+out %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```
+
+
+---------------
+
+
+Generalizing the solution
+===================
+
+```{r}
+#generalizing
+createVoteTable <- function(companies, numberofPlans, df=NULL){
+  if(is.null(df)){ #first run
+    firstRun <- TRUE
+    companies <- sort(companies)
+    df <- data.frame("empty")
+  } else{
+    firstRun <- FALSE
+  }
+  ndf <- NULL
+  for (p in 1:nrow(df)){
+    if(firstRun)
+      remainingCompanies <- companies
+    else
+      remainingCompanies <- setdiff(companies, unlist(strsplit(df[p,],",")))
+    if(length(remainingCompanies)>0){
+      for (c in 1:length(remainingCompanies)){ # from 1 to n companies can commit for first plan
+        possCombinations <- combinations(remainingCompanies, c) # possible combinations for companies to commit to 
+        for (comb in 1:nrow(possCombinations)){
+          if(firstRun){
+            ndf <- rbind(ndf, paste(possCombinations[comb,],collapse=","))
+          } else {
+            ndf <- rbind(ndf, c(df[p,], paste(possCombinations[comb,],collapse=","))) 
+          }
+        }
+      }
+    } else {
+      ndf <- rbind(ndf, c(df[p,], "")) 
+    }
+  }
+  
+  numberofPlans = numberofPlans - 1
+  if(numberofPlans == 0){
+    #removing duplicates
+    out <- data.frame(ndf)
+    out <- unite(out, aux, sep = "|", remove=F) 
+    out$aux <- duplicated(lapply(strsplit(out$aux,"\\|") , function(x){
+      tmp <- sort(x)
+      tmp <- tmp[!(tmp == "|")]
+      return(tmp)}))
+    out <- out[!(out$aux),-which(names(out) == "aux")] 
+    names(out) <- paste("Plan ", seq(1,length(out),1))
+    return(out)
+  }
+  createVoteTable(companies=companies, numberofPlans=numberofPlans, df=ndf)
+} 
+```
+
+
+
+---------------
+
+
+### Two companies
+
+```{r}
+# Two companies, two plans 
+companies <- c("A","B") # companies
+numberofPlans <- 2 # possible plans to be voted
+result <- createVoteTable(companies,numberofPlans)
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result) `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+```{r, echo = FALSE} 
+result %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```
+
+
+
+### Three companies
+
+```{r}
+# Three companies, Three plans 
+companies <- c("A","B","C") # companies
+numberofPlans <- 3 # possible plans to be voted
+result <- createVoteTable(companies,numberofPlans)
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result) `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+```{r, echo = FALSE} 
+result %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```
+
+
+### 23 companies
+
+```{r}
+# 23 companies, 23 plans
+companies <- paste0("C",1:23) # companies
+numberofPlans <- 23 # possible plans to be voted
+result <- createVoteTable(companies,numberofPlans)
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result) `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+```{r, echo = FALSE}
+result %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```

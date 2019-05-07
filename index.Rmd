@@ -3,6 +3,7 @@ title: "Vote combinations"
 output:
   html_document:
     theme: paper
+    code_folding: hide
     toc: true
     toc_float:
       collapsed: false
@@ -410,7 +411,9 @@ df <- data.frame(Companies = seq(2,10,1), Combinations = unlist(lapply(1:9,funct
 
 plot_ly(df, x = ~Companies, y = ~Combinations, type = 'scatter', mode = 'lines+markers',
         hoverinfo = 'text',
-        text = ~paste(Combinations, ' possible combinations.'))
+        text = ~paste(Combinations, ' possible combinations.')) %>%
+  layout(xaxis = list(title = "Companies/Plans"))
+
 
 ```
 

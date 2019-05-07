@@ -13,7 +13,7 @@ Initialization
 
 ```{r}
 # loading required libraries
-packagesList <- c("dplyr","tidyr","arrangements","knitr","kableExtra")
+packagesList <- c("dplyr","tidyr","arrangements","knitr","kableExtra","data.table","plotly")
 packages <- suppressWarnings(suppressMessages(lapply(packagesList, function(x){ if(!require(x, character.only = T, quietly = T)){ install.packages(x); return(paste0("installed missing package: ", x)) } else paste0("required package is installed: ", x) } )))
 ```
 
@@ -112,41 +112,44 @@ createVoteTable <- function(companies, numberofPlans, df=NULL){
     firstRun <- FALSE
   }
   ndf <- NULL
+  dat <- NULL
   for (p in 1:nrow(df)){
-    if(firstRun)
+    if(firstRun) {
       remainingCompanies <- companies
-    else
-      remainingCompanies <- setdiff(companies, unlist(strsplit(df[p,],",")))
+    } else {
+      remainingCompanies <- companies[!(companies %in% unlist(strsplit(as.character(df[p,]),",")))]
+    }
     if(length(remainingCompanies)>0){
       for (c in 1:length(remainingCompanies)){ # from 1 to n companies can commit for first plan
         possCombinations <- combinations(remainingCompanies, c) # possible combinations for companies to commit to 
-        for (comb in 1:nrow(possCombinations)){
-          if(firstRun){
-            ndf <- rbind(ndf, paste(possCombinations[comb,],collapse=","))
-          } else {
-            ndf <- rbind(ndf, c(df[p,], paste(possCombinations[comb,],collapse=","))) 
-          }
-        }
+        dat <- rbindlist(list(dat,rbindlist(lapply(1:nrow(possCombinations),function(comb) {
+          if(firstRun)
+            return(as.list(paste(possCombinations[comb,],collapse=",")))
+          else
+            return(c(as.list(df[p,]),paste(possCombinations[comb,],collapse=",")))
+        }))))
       }
     } else {
-      ndf <- rbind(ndf, c(df[p,], "")) 
+      dat <- rbindlist(list(dat,c(as.list(df[p,]), ""))) 
     }
   }
+  ndf <- data.frame(dat)
+  #removing duplicate plans
+  out <- as.data.frame(ndf)
+  out <- unite(out, aux, sep = "|", remove=F)
+  out$aux <- duplicated(lapply(strsplit(out$aux,"\\|") , function(x){
+    tmp <- sort(x)
+    tmp <- tmp[!(tmp == "|")]
+    return(tmp)}))
+  out <- out[!(out$aux),-which(names(out) == "aux")]
+  out <- as.data.frame(out)
   
   numberofPlans = numberofPlans - 1
   if(numberofPlans == 0){
-    #removing duplicates
-    out <- data.frame(ndf)
-    out <- unite(out, aux, sep = "|", remove=F) 
-    out$aux <- duplicated(lapply(strsplit(out$aux,"\\|") , function(x){
-      tmp <- sort(x)
-      tmp <- tmp[!(tmp == "|")]
-      return(tmp)}))
-    out <- out[!(out$aux),-which(names(out) == "aux")] 
     names(out) <- paste("Plan ", seq(1,length(out),1))
     return(out)
   }
-  createVoteTable(companies=companies, numberofPlans=numberofPlans, df=ndf)
+  createVoteTable(companies=companies, numberofPlans=numberofPlans, df=out)
 } 
 ```
 
@@ -159,21 +162,23 @@ createVoteTable <- function(companies, numberofPlans, df=NULL){
 
 ```{r}
 # Two companies, two plans 
-companies <- c("A","B") # companies
+companies <- c("C1","C2") # companies
 numberofPlans <- 2 # possible plans to be voted
-result <- createVoteTable(companies,numberofPlans)
+result <- list()
+result$'2' <- createVoteTable(companies,numberofPlans)
+saveRDS(result$'2', file = paste0("result_2.rds"))
 ```
 
 <b>Number:</b>
 
-Combination number for different voting clusters: <b> `r nrow(result) `</b>
+Combination number for different voting clusters: <b> `r nrow(result$'2') `</b>
 
 <b>Table:</b>
 
 Table with all possible assembly vote combinations:
 
 ```{r, echo = FALSE} 
-result %>%
+result$'2' %>%
   kable(row.names = FALSE) %>%
   kable_styling()
 ```
@@ -184,45 +189,233 @@ result %>%
 
 ```{r}
 # Three companies, Three plans 
-companies <- c("A","B","C") # companies
+companies <- as.vector(paste0("C",1:3)) # companies
 numberofPlans <- 3 # possible plans to be voted
-result <- createVoteTable(companies,numberofPlans)
+result$'3' <- createVoteTable(companies,numberofPlans)
+saveRDS(result$'3', file = paste0("result_3.rds"))
 ```
 
 <b>Number:</b>
 
-Combination number for different voting clusters: <b> `r nrow(result) `</b>
+Combination number for different voting clusters: <b> `r nrow(result$'3') `</b>
 
 <b>Table:</b>
 
 Table with all possible assembly vote combinations:
+
+<div style="height: 300px; overflow-y: scroll; overflow-x: hidden;">
 
 ```{r, echo = FALSE} 
-result %>%
+result$'3' %>%
   kable(row.names = FALSE) %>%
   kable_styling()
 ```
 
+</div>
 
-### 23 companies
+### Four companies
 
 ```{r}
-# 23 companies, 23 plans
-companies <- paste0("C",1:23) # companies
-numberofPlans <- 23 # possible plans to be voted
-result <- createVoteTable(companies,numberofPlans)
+# Three companies, Three plans 
+companies <- as.vector(paste0("C",1:4)) # companies
+numberofPlans <- 4 # possible plans to be voted
+#result$'4' <- createVoteTable(companies,numberofPlans)
+#saveRDS(result$'4', file = paste0("result_4.rds"))
+result$'4' <- readRDS("result_4.rds") #loading previous calculated result
 ```
 
 <b>Number:</b>
 
-Combination number for different voting clusters: <b> `r nrow(result) `</b>
+Combination number for different voting clusters: <b> `r nrow(result$'4') `</b>
 
 <b>Table:</b>
 
 Table with all possible assembly vote combinations:
 
-```{r, echo = FALSE}
-result %>%
+<div style="height: 300px; overflow-y: scroll; overflow-x: hidden;">
+
+```{r, echo = FALSE} 
+result$'4' %>%
   kable(row.names = FALSE) %>%
   kable_styling()
 ```
+
+</div>
+
+### Five companies
+
+```{r}
+# Three companies, Three plans 
+companies <- as.vector(paste0("C",1:5)) # companies
+numberofPlans <- 5 # possible plans to be voted
+#result$'5' <- createVoteTable(companies,numberofPlans)
+#saveRDS(result$'5', file = paste0("result_5.rds"))
+result$'5' <- readRDS("result_5.rds") #loading previous calculated result
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result$'5') `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+<div style="height: 300px; overflow-y: scroll; overflow-x: hidden;">
+
+```{r, echo = FALSE} 
+result$'5' %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```
+
+</div>
+
+### Six companies
+
+```{r}
+# Three companies, Three plans 
+companies <- as.vector(paste0("C",1:6)) # companies
+numberofPlans <- 6 # possible plans to be voted
+#result$'6' <- createVoteTable(companies,numberofPlans)
+#saveRDS(result$'6', file = paste0("result_6.rds"))
+result$'6' <- readRDS("result_6.rds") #loading previous calculated result
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result$'6') `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+<div style="height: 300px; overflow-y: scroll; overflow-x: hidden;">
+
+```{r, echo = FALSE} 
+result$'6' %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```
+
+</div>
+
+### Seven companies
+
+```{r}
+# Three companies, Three plans 
+companies <- as.vector(paste0("C",1:7)) # companies
+numberofPlans <- 7 # possible plans to be voted
+#result$'7' <- createVoteTable(companies,numberofPlans)
+#saveRDS(result$'7', file = paste0("result_5.rds"))
+result$'7' <- readRDS("result_7.rds") #loading previous calculated result
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result$'7') `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+<div style="height: 300px; overflow-y: scroll; overflow-x: hidden;">
+
+```{r, echo = FALSE} 
+result$'7' %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```
+
+</div>
+
+### Eight companies
+
+```{r}
+# Three companies, Three plans 
+companies <- as.vector(paste0("C",1:8)) # companies
+numberofPlans <- 8 # possible plans to be voted
+#result$'8' <- createVoteTable(companies,numberofPlans)
+#saveRDS(result$'8', file = paste0("result_5.rds"))
+result$'8' <- readRDS("result_8.rds") #loading previous calculated result
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result$'8') `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations:
+
+<div style="height: 300px; overflow-y: scroll; overflow-x: hidden;">
+
+```{r, echo = FALSE} 
+result$'8' %>%
+  kable(row.names = FALSE) %>%
+  kable_styling()
+```
+
+</div>
+
+### Nine companies
+
+```{r}
+# Three companies, Three plans 
+companies <- as.vector(paste0("C",1:9)) # companies
+numberofPlans <- 9 # possible plans to be voted
+#result$'9' <- createVoteTable(companies,numberofPlans)
+#saveRDS(result$'9', file = paste0("result_9.rds"))
+result$'9' <- readRDS("result_9.rds") #loading previous calculated result
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result$'9') `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations hidden due to size. 
+
+
+### Ten companies
+
+```{r}
+# Three companies, Three plans 
+companies <- as.vector(paste0("C",1:10)) # companies
+numberofPlans <- 10 # possible plans to be voted
+#result$'10' <- createVoteTable(companies,numberofPlans)
+#saveRDS(result$'10', file = paste0("result_10.rds"))
+result$'10' <- readRDS("result_10.rds") #loading previous calculated result
+```
+
+<b>Number:</b>
+
+Combination number for different voting clusters: <b> `r nrow(result$'10') `</b>
+
+<b>Table:</b>
+
+Table with all possible assembly vote combinations hidden due to size. 
+
+---------------
+
+
+Chart Summary
+===================
+
+
+```{r}
+
+df <- data.frame(Companies = seq(2,10,1), Combinations = unlist(lapply(1:9,function(i){return(nrow(result[[i]]))})))
+
+plot_ly(df, x = ~Companies, y = ~Combinations, type = 'scatter', mode = 'lines+markers',
+        hoverinfo = 'text',
+        text = ~paste(Combinations, ' possible combinations.'))
+
+```
+
+
+
+
+
+

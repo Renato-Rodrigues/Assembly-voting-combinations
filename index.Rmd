@@ -16,6 +16,7 @@ Initialization
 # loading required libraries
 packagesList <- c("dplyr","tidyr","arrangements","knitr","kableExtra","data.table","plotly")
 packages <- suppressWarnings(suppressMessages(lapply(packagesList, function(x){ if(!require(x, character.only = T, quietly = T)){ install.packages(x); return(paste0("installed missing package: ", x)) } else paste0("required package is installed: ", x) } )))
+options(stringsAsFactors = FALSE)
 ```
 
 
@@ -112,7 +113,6 @@ createVoteTable <- function(companies, numberofPlans, df=NULL){
   } else{
     firstRun <- FALSE
   }
-  ndf <- NULL
   dat <- NULL
   for (p in 1:nrow(df)){
     if(firstRun) {
@@ -144,7 +144,6 @@ createVoteTable <- function(companies, numberofPlans, df=NULL){
     return(tmp)}))
   out <- out[!(out$aux),-which(names(out) == "aux")]
   out <- as.data.frame(out)
-  
   numberofPlans = numberofPlans - 1
   if(numberofPlans == 0){
     names(out) <- paste("Plan ", seq(1,length(out),1))
@@ -220,9 +219,9 @@ result$'3' %>%
 # Three companies, Three plans 
 companies <- as.vector(paste0("C",1:4)) # companies
 numberofPlans <- 4 # possible plans to be voted
-#result$'4' <- createVoteTable(companies,numberofPlans)
-#saveRDS(result$'4', file = paste0("result_4.rds"))
-result$'4' <- readRDS("result_4.rds") #loading previous calculated result
+result$'4' <- createVoteTable(companies,numberofPlans)
+saveRDS(result$'4', file = paste0("result_4.rds"))
+#result$'4' <- readRDS("result_4.rds") #loading previous calculated result
 ```
 
 <b>Number:</b>
@@ -249,9 +248,9 @@ result$'4' %>%
 # Three companies, Three plans 
 companies <- as.vector(paste0("C",1:5)) # companies
 numberofPlans <- 5 # possible plans to be voted
-#result$'5' <- createVoteTable(companies,numberofPlans)
-#saveRDS(result$'5', file = paste0("result_5.rds"))
-result$'5' <- readRDS("result_5.rds") #loading previous calculated result
+result$'5' <- createVoteTable(companies,numberofPlans)
+saveRDS(result$'5', file = paste0("result_5.rds"))
+#result$'5' <- readRDS("result_5.rds") #loading previous calculated result
 ```
 
 <b>Number:</b>
@@ -278,9 +277,9 @@ result$'5' %>%
 # Three companies, Three plans 
 companies <- as.vector(paste0("C",1:6)) # companies
 numberofPlans <- 6 # possible plans to be voted
-#result$'6' <- createVoteTable(companies,numberofPlans)
-#saveRDS(result$'6', file = paste0("result_6.rds"))
-result$'6' <- readRDS("result_6.rds") #loading previous calculated result
+result$'6' <- createVoteTable(companies,numberofPlans)
+saveRDS(result$'6', file = paste0("result_6.rds"))
+#result$'6' <- readRDS("result_6.rds") #loading previous calculated result
 ```
 
 <b>Number:</b>
@@ -307,9 +306,9 @@ result$'6' %>%
 # Three companies, Three plans 
 companies <- as.vector(paste0("C",1:7)) # companies
 numberofPlans <- 7 # possible plans to be voted
-#result$'7' <- createVoteTable(companies,numberofPlans)
-#saveRDS(result$'7', file = paste0("result_5.rds"))
-result$'7' <- readRDS("result_7.rds") #loading previous calculated result
+result$'7' <- createVoteTable(companies,numberofPlans)
+saveRDS(result$'7', file = paste0("result_5.rds"))
+#result$'7' <- readRDS("result_7.rds") #loading previous calculated result
 ```
 
 <b>Number:</b>
